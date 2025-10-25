@@ -1,0 +1,17 @@
+# Environment
+.venv/
+*.pyc
+__pycache__/
+
+# Data artefacts
+data/
+outputs/
+logs/
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Local installs
+.deps/
+.mypy_cache/
+.pytest_cache/
