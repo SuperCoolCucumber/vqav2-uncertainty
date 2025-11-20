@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import logging
 import re
@@ -171,14 +172,36 @@ def prepare_model(
     )
 
     generation_params = GenerationParameters(max_new_tokens=max_new_tokens)
-    vw_model = VisualWhiteboxModel(
-        base_model,
-        processor,
-        model_path=model_name,
-        model_type="VisualLM",
-        image_paths=[str(initial_image_path)],
-        generation_parameters=generation_params,
-    )
+    init_kwargs = {
+        "model_path": model_name,
+        "model_type": "VisualLM",
+        "generation_parameters": generation_params,
+    }
+    sig_params = inspect.signature(VisualWhiteboxModel.__init__).parameters
+    image_arg_name: Optional[str] = None
+    image_value = str(initial_image_path)
+    if "image_paths" in sig_params:
+        image_arg_name = "image_paths"
+        init_kwargs[image_arg_name] = [image_value]
+    elif "image_path" in sig_params:
+        image_arg_name = "image_path"
+        init_kwargs[image_arg_name] = image_value
+    elif "image_urls" in sig_params:
+        LOGGER.warning(
+            "VisualWhiteboxModel expects 'image_urls' but local files are provided; "
+            "attempting to instantiate without preloaded images."
+        )
+    try:
+        vw_model = VisualWhiteboxModel(
+            base_model,
+            processor,
+            **init_kwargs,
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "VisualWhiteboxModel requires an initial image. "
+            "Consider upgrading lm-polygraph to a version that supports the 'image_paths' argument."
+        ) from exc
     vw_model.images = []  # Will be populated per-sample.
     return vw_model
 
@@ -224,13 +247,20 @@ def apply_abstention_rule(
     return decisions
 
 
-def build_input_text(question: str, system_prompt: Optional[str]) -> str:
+def build_input_text(
+    question: str,
+    system_prompt: Optional[str],
+    image_placeholder: Optional[str] = None,
+) -> str:
     """Compose model input text with an optional system prompt."""
 
+    segments: List[str] = []
     if system_prompt:
-        prompt = system_prompt.strip()
-        return f"{prompt}\n\nQuestion: {question}"
-    return question
+        segments.append(system_prompt.strip())
+    if image_placeholder:
+        segments.append(image_placeholder)
+    segments.append(f"Question: {question}")
+    return "\n\n".join(seg for seg in segments if seg)
 
 
 def parse_answers_field(raw: Any) -> List[str]:
@@ -320,6 +350,16 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         default=None,
         help="Optional directory to prefix to relative image paths stored in the manifest.",
     )
+    parser.add_argument(
+        "--image-placeholder",
+        default=None,
+        help="Optional token/text to prepend before the question (e.g. '<|vision_start|><image><|vision_end|>' for Qwen).",
+    )
+    parser.add_argument(
+        "--disable-chat-template",
+        action="store_true",
+        help="Unset tokenizer.chat_template after loading the model. Useful for models where you supply your own multimodal tokens.",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--summary-path", type=Path, default=Path("data/uncertainty_summary.json"))
     parser.add_argument("--log-level", default="INFO")
@@ -373,10 +413,14 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     instantiated_estimators: Dict[str, Estimator] = {
         spec.key: spec.factory() for spec in estimators
     }
+    if args.disable_chat_template and hasattr(model.tokenizer, "chat_template"):
+        LOGGER.info("Disabling tokenizer chat template as requested.")
+        model.tokenizer.chat_template = None
 
     records: List[Dict[str, Any]] = []
     primary_scores: List[float] = []
     system_prompt = args.system_prompt.strip() if args.system_prompt else None
+    image_placeholder = args.image_placeholder
 
     for row in tqdm(manifest.itertuples(index=False), total=len(manifest), desc="Evaluating"):
         image_value = getattr(row, args.image_column)
@@ -417,7 +461,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
                 seen.add(key)
         answers_list = dedup_answers
 
-        input_text = build_input_text(str(question), system_prompt)
+        input_text = build_input_text(str(question), system_prompt, image_placeholder)
 
         with Image.open(resolved_image) as img:
             model.images = [img.convert("RGB").copy()]

@@ -18,6 +18,8 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+> **Heads up:** the project pins `lm-polygraph` to commit `e70b293` for compatibility with the VisualWhitebox pipeline. If you installed an earlier version, re-run `pip install -r requirements.txt` after pulling changes.
+
 > **Note:** lm-polygraph requires Python ≥ 3.10. Adjust the `torch` wheel in `requirements.txt` to match your platform (CPU vs CUDA).
 
 ## Prepare a VQAv2 sample
@@ -54,7 +56,7 @@ Key outputs:
 - `uncertainty_metrics.parquet`: per-sample results including model answer, uncertainty scores, and `correct_exact` flag.
 - `uncertainty_summary.json`: aggregate accuracy, optional abstention statistics, and Pearson/Spearman correlations between uncertainty and correctness for each estimator.
 
-You can plug in other checkpoints (e.g. `Qwen/Qwen3-VL-2B-Instruct-FP8`) by changing `--model-name`.
+You can plug in other checkpoints (e.g. `Qwen/Qwen3-VL-2B-Instruct-FP8`) by changing `--model-name`. Some models expect explicit multimodal tokens—pass `--image-placeholder "<|vision_start|><image><|vision_end|>"` (or the sequence defined by that model) and add `--disable-chat-template` so your placeholder isn’t overridden by the tokenizer’s built-in chat template.
 
 ## Analyse correlations
 
