@@ -1,0 +1,17 @@
+{
+  "num_samples": 10000,
+  "estimator": "perplexity",
+  "abstain_column": null,
+  "uncertainty_statistics": {
+    "mean": 0.48169151395950466,
+    "std": 0.20914326006057601,
+    "min": 0.026197616010904312,
+    "max": 2.0913619995117188
+  },
+  "abstention_rate": null,
+  "uncertainty_vs_label": {
+    "pearson": -0.2059187175297297,
+    "spearman": -0.20700711005986636,
+    "kendall": -0.16902905517003497
+  }
+}

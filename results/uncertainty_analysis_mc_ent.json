@@ -1,0 +1,17 @@
+{
+  "num_samples": 10000,
+  "estimator": "monte_carlo_sequence_entropy",
+  "abstain_column": null,
+  "uncertainty_statistics": {
+    "mean": 14.167268067212584,
+    "std": 7.598607280828414,
+    "min": 0.19696306344121695,
+    "max": 105.74299288162838
+  },
+  "abstention_rate": null,
+  "uncertainty_vs_label": {
+    "pearson": -0.08856478196086445,
+    "spearman": -0.09880261323580738,
+    "kendall": -0.08067602939272095
+  }
+}

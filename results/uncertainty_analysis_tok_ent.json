@@ -1,0 +1,17 @@
+{
+  "num_samples": 10000,
+  "estimator": "mean_token_entropy",
+  "abstain_column": null,
+  "uncertainty_statistics": {
+    "mean": 1.198264772322774,
+    "std": 0.4452238920977865,
+    "min": 0.18617883324623108,
+    "max": 4.832894325256348
+  },
+  "abstention_rate": null,
+  "uncertainty_vs_label": {
+    "pearson": -0.2658937290032201,
+    "spearman": -0.25383720868773746,
+    "kendall": -0.207267585968674
+  }
+}
